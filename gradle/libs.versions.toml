@@ -86,6 +86,7 @@ managed-jackson-annotations = "2.22"
 managed-kotlin = "2.3.21"
 managed-kotlin-coroutines = "1.10.2"
 managed-graalpy = "25.2.4"
+managed-scala3 = "3.8.3"
 managed-methvin-directory-watcher = "0.19.1"
 managed-netty = "4.2.17.Final"
 managed-netty-tcnative = "2.0.81.Final"
@@ -147,6 +148,9 @@ managed-kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", versi
 managed-kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "managed-kotlin" }
 managed-kotlin-stdlib-jdk8 = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8", version.ref = "managed-kotlin" }
 managed-kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "managed-kotlin" }
+
+managed-scala3-compiler = { module = "org.scala-lang:scala3-compiler_3", version.ref = "managed-scala3" }
+managed-scala3-library = { module = "org.scala-lang:scala3-library_3", version.ref = "managed-scala3" }
 
 managed-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "managed-kotlin-coroutines" }
 managed-kotlinx-coroutines-jdk8 = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8", version.ref = "managed-kotlin-coroutines" }

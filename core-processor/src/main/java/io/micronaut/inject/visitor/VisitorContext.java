@@ -366,7 +366,8 @@ public interface VisitorContext extends MutableConvertibleValues<Object>, ClassW
         JAVA("Java"),
         GROOVY("Groovy"),
         KOTLIN("Kotlin"),
-        PYTHON("Python"),;
+        PYTHON("Python"),
+        SCALA("Scala");
 
         private final String displayName;
 
