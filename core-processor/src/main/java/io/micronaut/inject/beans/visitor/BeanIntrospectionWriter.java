@@ -127,6 +127,12 @@ final class BeanIntrospectionWriter implements OriginatingElements, Buildable<Li
         AnnotationMetadata.class
     );
 
+    private static final java.lang.reflect.Constructor<?> ENUM_CONSTANT_OBJECT_REF_CONSTRUCTOR = ReflectionUtils.getRequiredInternalConstructor(
+        AbstractEnumBeanIntrospectionAndReference.EnumConstantObjectRef.class,
+        Object.class,
+        AnnotationMetadata.class
+    );
+
     private static final java.lang.reflect.Constructor<?> INTROSPECTION_SUPER_CONSTRUCTOR = ReflectionUtils.getRequiredInternalConstructor(
         AbstractInitializableBeanIntrospectionAndReference.class,
         Class.class,
@@ -146,6 +152,17 @@ final class BeanIntrospectionWriter implements OriginatingElements, Buildable<Li
         AbstractInitializableBeanIntrospection.BeanPropertyRef[].class,
         AbstractInitializableBeanIntrospection.BeanMethodRef[].class,
         AbstractEnumBeanIntrospectionAndReference.EnumConstantDynamicRef[].class
+    );
+
+    private static final java.lang.reflect.Constructor<?> ENUM_INTROSPECTION_OBJECT_SUPER_CONSTRUCTOR = ReflectionUtils.getRequiredInternalConstructor(
+        AbstractEnumBeanIntrospectionAndReference.class,
+        Class.class,
+        AnnotationMetadata.class,
+        AnnotationMetadata.class,
+        Argument[].class,
+        AbstractInitializableBeanIntrospection.BeanPropertyRef[].class,
+        AbstractInitializableBeanIntrospection.BeanMethodRef[].class,
+        AbstractEnumBeanIntrospectionAndReference.EnumConstantObjectRef[].class
     );
 
     private static final java.lang.reflect.Constructor<?> BEAN_PROPERTY_REF_CONSTRUCTOR = ReflectionUtils.getRequiredInternalConstructor(
@@ -200,6 +217,7 @@ final class BeanIntrospectionWriter implements OriginatingElements, Buildable<Li
     private final DispatchWriter dispatchWriter;
     private final EvaluatedExpressionProcessor evaluatedExpressionProcessor;
     private final AnnotationMetadata annotationMetadata;
+    private final boolean useObjectEnumConstantRefs;
 
     private final OriginatingElements originatingElements;
 
@@ -225,6 +243,7 @@ final class BeanIntrospectionWriter implements OriginatingElements, Buildable<Li
         this.originatingElements = OriginatingElements.of(beanClassElement);
         evaluatedExpressionProcessor = new EvaluatedExpressionProcessor(visitorContext, beanClassElement);
         evaluatedExpressionProcessor.processEvaluatedExpressions(annotationMetadata, null);
+        useObjectEnumConstantRefs = useObjectEnumConstantRefs(visitorContext, beanClassElement);
         this.visitorContext = visitorContext;
     }
 
@@ -256,6 +275,11 @@ final class BeanIntrospectionWriter implements OriginatingElements, Buildable<Li
         this.originatingElements = OriginatingElements.of(originatingElement);
         evaluatedExpressionProcessor = new EvaluatedExpressionProcessor(visitorContext, beanClassElement);
         evaluatedExpressionProcessor.processEvaluatedExpressions(annotationMetadata, null);
+        useObjectEnumConstantRefs = useObjectEnumConstantRefs(visitorContext, beanClassElement);
+    }
+
+    private static boolean useObjectEnumConstantRefs(VisitorContext visitorContext, ClassElement beanClassElement) {
+        return beanClassElement.isEnum() && visitorContext.getLanguage() == VisitorContext.Language.SCALA;
     }
 
     /**
@@ -512,20 +536,47 @@ final class BeanIntrospectionWriter implements OriginatingElements, Buildable<Li
     }
 
     private ExpressionDef newEnumConstantRef(EnumConstantElement enumConstantElement, Function<String, ExpressionDef> loadClassValueExpressionFn) {
-        return ClassTypeDef.of(
-            AbstractEnumBeanIntrospectionAndReference.EnumConstantDynamicRef.class
-        ).instantiate(
-            ENUM_CONSTANT_DYNAMIC_REF_CONSTRUCTOR,
-
-            // 1: push annotation class value
+        Class<?> enumConstantRefType = useObjectEnumConstantRefs
+            ? AbstractEnumBeanIntrospectionAndReference.EnumConstantObjectRef.class
+            : AbstractEnumBeanIntrospectionAndReference.EnumConstantDynamicRef.class;
+        java.lang.reflect.Constructor<?> enumConstantRefConstructor = useObjectEnumConstantRefs
+            ? ENUM_CONSTANT_OBJECT_REF_CONSTRUCTOR
+            : ENUM_CONSTANT_DYNAMIC_REF_CONSTRUCTOR;
+        ExpressionDef annotationMetadataExpression;
+        if (enumConstantElement.getAnnotationMetadata() == null || enumConstantElement.getAnnotationMetadata().isEmpty()) {
+            annotationMetadataExpression = ClassTypeDef.of(AnnotationMetadata.class).getStaticField("EMPTY_METADATA", TypeDef.of(AnnotationMetadata.class));
+        } else {
+            annotationMetadataExpression = getAnnotationMetadataExpression(enumConstantElement.getAnnotationMetadata(), loadClassValueExpressionFn);
+        }
+        if (useObjectEnumConstantRefs) {
+            return ClassTypeDef.of(enumConstantRefType).instantiate(
+                enumConstantRefConstructor,
+                enumValueExpression(enumConstantElement),
+                annotationMetadataExpression
+            );
+        }
+        return ClassTypeDef.of(enumConstantRefType).instantiate(
+            enumConstantRefConstructor,
             loadClassValueExpressionFn.apply(enumConstantElement.getOwningType().getName()),
-            // 2: push enum name
             ExpressionDef.constant(enumConstantElement.getName()),
-            // 3: annotation metadata
-            enumConstantElement.getAnnotationMetadata() == null || enumConstantElement.getAnnotationMetadata().isEmpty() ? (
-                ClassTypeDef.of(AnnotationMetadata.class).getStaticField("EMPTY_METADATA", TypeDef.of(AnnotationMetadata.class))
-            ) : getAnnotationMetadataExpression(enumConstantElement.getAnnotationMetadata(), loadClassValueExpressionFn)
+            annotationMetadataExpression
         );
+    }
+
+    private ExpressionDef enumValueExpression(EnumConstantElement enumConstantElement) {
+        if (constructor != null && constructor.isStatic() && constructor.getName().equals("valueOf") && constructor.getParameters().length == 1) {
+            return ClassTypeDef.of(enumConstantElement.getOwningType())
+                .invokeStatic(
+                    constructor,
+                    List.of(ExpressionDef.constant(enumConstantElement.getName()))
+                );
+        }
+        return ClassTypeDef.of(enumConstantElement.getOwningType())
+            .invokeStatic(
+                "valueOf",
+                TypeDef.erasure(enumConstantElement.getOwningType()),
+                ExpressionDef.constant(enumConstantElement.getName())
+            );
     }
 
     private boolean hasAssociatedConstructorArgument(String name, TypedElement typedElement) {
@@ -672,10 +723,14 @@ final class BeanIntrospectionWriter implements OriginatingElements, Buildable<Li
             beanMethodsField = null;
         }
         if (isEnum) {
-            enumsField = FieldDef.builder(FIELD_ENUM_CONSTANTS_REFERENCES, AbstractEnumBeanIntrospectionAndReference.EnumConstantDynamicRef[].class)
+            Class<?> enumConstantRefType = useObjectEnumConstantRefs
+                ? AbstractEnumBeanIntrospectionAndReference.EnumConstantObjectRef.class
+                : AbstractEnumBeanIntrospectionAndReference.EnumConstantDynamicRef.class;
+            ClassTypeDef enumConstantRefTypeDef = ClassTypeDef.of(enumConstantRefType);
+            enumsField = FieldDef.builder(FIELD_ENUM_CONSTANTS_REFERENCES, enumConstantRefTypeDef.array())
                 .addModifiers(Modifier.PRIVATE, Modifier.FINAL, Modifier.STATIC)
                 .initializer(
-                    ClassTypeDef.of(AbstractEnumBeanIntrospectionAndReference.EnumConstantDynamicRef.class).array()
+                    enumConstantRefTypeDef.array()
                         .instantiate(
                             ((EnumElement) beanClassElement).elements().stream()
                                 .map(e -> newEnumConstantRef(e, loadClassValueExpressionFn))
@@ -747,7 +802,10 @@ final class BeanIntrospectionWriter implements OriginatingElements, Buildable<Li
 
                     if (enumsField != null) {
                         values.add(introspectionTypeDef.getStaticField(enumsField));
-                        return aThis.superRef().invokeConstructor(ENUM_INTROSPECTION_SUPER_CONSTRUCTOR, values);
+                        java.lang.reflect.Constructor<?> enumIntrospectionSuperConstructor = useObjectEnumConstantRefs
+                            ? ENUM_INTROSPECTION_OBJECT_SUPER_CONSTRUCTOR
+                            : ENUM_INTROSPECTION_SUPER_CONSTRUCTOR;
+                        return aThis.superRef().invokeConstructor(enumIntrospectionSuperConstructor, values);
                     } else {
                         return aThis.superRef().invokeConstructor(INTROSPECTION_SUPER_CONSTRUCTOR, values);
                     }
