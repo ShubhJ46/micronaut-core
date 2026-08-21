@@ -256,7 +256,11 @@ Work the backlog in this order:
      `ScalaBeanIntrospectionSpec`, `ScalaBeanDefinitionSpec`, and
      `ScalaMicronautFeatureSpec`.
    - Pending failures:
-     covered for the current focused parity surface.
+     Scala `@Bean` factory methods returning Java or Scala collections generate
+     their references, but those references are not returned as element-bean
+     candidates by the application context. The two collection-factory tests in
+     `ScalaBeanDefinitionSpec` remain marked `@PendingFeature` until candidate
+     indexing/resolution is corrected.
    - Implementation direction:
      `Provider[T]` was resolved by adding the missing
      `JakartaProviderBeanDefinition` infrastructure bean to the lightweight
