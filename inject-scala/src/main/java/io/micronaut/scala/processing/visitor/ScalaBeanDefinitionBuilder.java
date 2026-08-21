@@ -15,10 +15,6 @@
  */
 package io.micronaut.scala.processing.visitor;
 
-import io.micronaut.aop.Around;
-import io.micronaut.aop.InterceptorKind;
-import io.micronaut.aop.internal.intercepted.InterceptedMethodUtil;
-import io.micronaut.aop.writer.AopProxyWriter;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.AnnotationValueBuilder;
@@ -28,17 +24,18 @@ import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
 import io.micronaut.inject.ast.FieldElement;
 import io.micronaut.inject.ast.MethodElement;
-import io.micronaut.inject.ast.TypedElement;
 import io.micronaut.inject.ast.annotation.ElementAnnotationMetadataFactory;
 import io.micronaut.inject.ast.beans.BeanParameterElement;
+import io.micronaut.inject.processing.definition.ElementBeanDefinitionBuilderFactory;
+import io.micronaut.inject.utils.BeanInjectionUtils;
 import io.micronaut.inject.visitor.TypeElementVisitor;
 import io.micronaut.inject.writer.AbstractBeanDefinitionBuilder;
-import io.micronaut.inject.writer.BeanDefinitionVisitor;
-import io.micronaut.inject.writer.BeanDefinitionWriter;
+import io.micronaut.context.beans.definition.MethodDefinition;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.annotation.Annotation;
-import java.util.function.BiConsumer;
+import java.util.Arrays;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -85,16 +82,11 @@ class ScalaBeanDefinitionBuilder extends AbstractBeanDefinitionBuilder {
             }
 
             @Override
-            protected BeanDefinitionVisitor createBeanDefinitionWriter() {
-                BeanDefinitionVisitor writer = super.createBeanDefinitionWriter();
+            public <R> List<R> build(ElementBeanDefinitionBuilderFactory<R> beanDefinitionBuilderFactory) {
                 ClassElement newParent = parentType.withAnnotationMetadata(parentType.copyAnnotationMetadata());
-                writer.visitBeanFactoryField(
-                    newParent,
-                    producerField.withAnnotationMetadata(
-                        new AnnotationMetadataHierarchy(newParent.getDeclaredMetadata(), producerField.getDeclaredMetadata())
-                    )
-                );
-                return writer;
+                return beanDefinitionBuilderFactory.factoryField(producerField.withAnnotationMetadata(
+                    new AnnotationMetadataHierarchy(newParent.getDeclaredMetadata(), producerField.getDeclaredMetadata(), getAnnotationMetadata())
+                )).build();
             }
         };
     }
@@ -129,42 +121,20 @@ class ScalaBeanDefinitionBuilder extends AbstractBeanDefinitionBuilder {
             }
 
             @Override
-            protected BeanDefinitionVisitor createBeanDefinitionWriter() {
-                BeanDefinitionVisitor writer = super.createBeanDefinitionWriter();
+            public <R> List<R> build(ElementBeanDefinitionBuilderFactory<R> beanDefinitionBuilderFactory) {
                 ClassElement newParent = parentType.withAnnotationMetadata(parentType.copyAnnotationMetadata());
-                writer.visitBeanFactoryMethod(
-                    newParent,
-                    producerMethod.withAnnotationMetadata(
-                        new AnnotationMetadataHierarchy(newParent.getDeclaredMetadata(), producerMethod.getDeclaredMetadata())
-                    ),
-                    getParameters()
+                MethodElement methodElement = producerMethod.withAnnotationMetadata(
+                    new AnnotationMetadataHierarchy(newParent.getDeclaredMetadata(), producerMethod.getDeclaredMetadata(), getAnnotationMetadata())
                 );
-                return writer;
+                return beanDefinitionBuilderFactory.factoryMethod(new MethodDefinition<>(
+                    methodElement,
+                    methodElement.getAnnotationMetadata(),
+                    Arrays.stream(getParameters())
+                        .map(parameter -> BeanInjectionUtils.getInjectionPoint(newParent, parameter.getGenericType(), parameter, parameter.getName(), visitorContext))
+                        .toList(),
+                    methodElement.isReflectionRequired()
+                )).build();
             }
-        };
-    }
-
-    @Override
-    protected BeanDefinitionVisitor createAopWriter(BeanDefinitionWriter beanDefinitionWriter, AnnotationMetadata annotationMetadata) {
-        AnnotationValue<?>[] interceptorTypes =
-            InterceptedMethodUtil.resolveInterceptorBinding(annotationMetadata, InterceptorKind.AROUND);
-        return new AopProxyWriter(
-            getBeanType(),
-            beanDefinitionWriter,
-            annotationMetadata.getValues(Around.class, Boolean.class),
-            visitorContext,
-            interceptorTypes
-        );
-    }
-
-    @Override
-    protected BiConsumer<TypedElement, MethodElement> createAroundMethodVisitor(BeanDefinitionVisitor aopWriter) {
-        AopProxyWriter aopProxyWriter = (AopProxyWriter) aopWriter;
-        return (bean, method) -> {
-            AnnotationValue<?>[] newTypes =
-                InterceptedMethodUtil.resolveInterceptorBinding(method.getAnnotationMetadata(), InterceptorKind.AROUND);
-            aopProxyWriter.visitInterceptorBinding(newTypes);
-            aopProxyWriter.visitAroundMethod(bean, method);
         };
     }
 

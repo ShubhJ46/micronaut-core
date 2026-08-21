@@ -18,6 +18,7 @@ package io.micronaut.scala.processing.visitor;
 import io.micronaut.context.annotation.BeanProperties;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.naming.NameUtils;
+import io.micronaut.core.type.DefaultArgument;
 import io.micronaut.inject.annotation.MutableAnnotationMetadata;
 import io.micronaut.inject.ast.ArrayableClassElement;
 import io.micronaut.inject.ast.ClassElement;
@@ -682,6 +683,12 @@ public class ScalaClassElement extends AbstractScalaElement implements Arrayable
     @Override
     public boolean isPrimitive() {
         return typeData.primitive();
+    }
+
+    @Override
+    public boolean isContainerType() {
+        return DefaultArgument.CONTAINER_TYPES.contains(getName())
+            || getName().startsWith("scala.collection.");
     }
 
     @Override

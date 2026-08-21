@@ -161,7 +161,6 @@ final class FactoryBeanElementCreator<R> extends DeclaredBeanElementCreator<R> {
                                              ClassElement originalProducedType,
                                              MemberElement producingElement,
                                              AnnotationMetadata producedAnnotationMetadata) {
-
         if (producedType.hasStereotype(EachProperty.class)) {
             producedType.annotate(ConfigurationReader.class, builder -> builder.member(ConfigurationReader.PREFIX, ConfigurationUtils.getRequiredTypePath(producedType)));
             producingElement.annotate(ConfigurationReader.class, builder -> builder.member(ConfigurationReader.PREFIX, ConfigurationUtils.getRequiredTypePath(producedType)));
@@ -189,7 +188,7 @@ final class FactoryBeanElementCreator<R> extends DeclaredBeanElementCreator<R> {
         if (producedAnnotationMetadata.hasStereotype(ConfigurationReader.class)) {
             for (PropertyElement propertyElement : producedType.getBeanProperties()) {
                 if (!propertyElement.isExcluded()) {
-                    ConfigurationReaderBeanElementCreator.visitPropertyValue(producedBeanDefinitionWriter, producedType, visitorContext, propertyElement);
+                    ConfigurationReaderBeanElementCreator.visitPropertyValue(beanDefinitionBuilder, producedType, visitorContext, propertyElement);
                 }
             }
         }

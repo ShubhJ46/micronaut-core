@@ -32,9 +32,10 @@ import io.micronaut.inject.ast.EnumConstantElement;
 import io.micronaut.inject.ast.FieldElement;
 import io.micronaut.inject.ast.MemberElement;
 import io.micronaut.inject.ast.MethodElement;
-import io.micronaut.inject.processing.BeanDefinitionCreator;
 import io.micronaut.inject.processing.BeanDefinitionCreatorFactory;
 import io.micronaut.inject.processing.ProcessingException;
+import io.micronaut.inject.processing.definition.DefaultElementBeanDefinitionBuilderFactory;
+import io.micronaut.inject.processing.definition.OutputObjectDef;
 import io.micronaut.inject.visitor.BeanElementVisitor;
 import io.micronaut.inject.visitor.TypeElementQuery;
 import io.micronaut.inject.visitor.TypeElementVisitor;
@@ -42,6 +43,9 @@ import io.micronaut.inject.visitor.VisitorContext;
 import io.micronaut.inject.writer.AbstractBeanDefinitionBuilder;
 import io.micronaut.inject.writer.BeanDefinitionVisitor;
 import io.micronaut.inject.writer.BeanDefinitionWriter;
+import io.micronaut.inject.writer.ByteCodeWriterUtils;
+import io.micronaut.inject.writer.OriginatingElements;
+import io.micronaut.sourcegen.model.ObjectDef;
 import org.jspecify.annotations.Nullable;
 
 import java.io.File;
@@ -180,11 +184,10 @@ public final class ScalaProcessingEngine {
                 continue;
             }
             try {
-                BeanDefinitionCreator beanDefinitionCreator = BeanDefinitionCreatorFactory.produce(classElement, context);
-                for (BeanDefinitionVisitor writer : beanDefinitionCreator.build()) {
-                    if (generatedBeanDefinitions.add(writer.getBeanDefinitionName()) && writer.isEnabled()) {
-                        writer.visitBeanDefinitionEnd();
-                        writer.accept(context);
+                DefaultElementBeanDefinitionBuilderFactory beanDefinitionBuilderFactory = new DefaultElementBeanDefinitionBuilderFactory(context);
+                for (OutputObjectDef outputObjectDef : BeanDefinitionCreatorFactory.produce(classElement, beanDefinitionBuilderFactory, context)) {
+                    if (generatedBeanDefinitions.add(outputObjectDef.objectDef().getName())) {
+                        writeBeanDefinition(outputObjectDef, context);
                     }
                 }
             } catch (ProcessingException e) {
@@ -204,10 +207,26 @@ public final class ScalaProcessingEngine {
         if (builders.isEmpty()) {
             return;
         }
+        DefaultElementBeanDefinitionBuilderFactory beanDefinitionBuilderFactory = new DefaultElementBeanDefinitionBuilderFactory(context);
         try {
-            AbstractBeanDefinitionBuilder.writeBeanDefinitionBuilders(context, builders);
+            for (OutputObjectDef outputObjectDef : AbstractBeanDefinitionBuilder.build(builders, beanDefinitionBuilderFactory)) {
+                if (generatedBeanDefinitions.add(outputObjectDef.objectDef().getName())) {
+                    writeBeanDefinition(outputObjectDef, context);
+                }
+            }
         } catch (IOException e) {
             context.fail("Unexpected error writing bean definition: " + exceptionMessage(e), null);
+        }
+    }
+
+    private void writeBeanDefinition(OutputObjectDef outputObjectDef, ScalaVisitorContext context) throws IOException {
+        ObjectDef objectDef = outputObjectDef.objectDef();
+        OriginatingElements originatingElements = outputObjectDef.originatingElements();
+        if (outputObjectDef.serviceClass() != null) {
+            context.visitServiceDescriptor(outputObjectDef.serviceClass(), objectDef.getName(), originatingElements.getOriginatingElements()[0]);
+        }
+        try (var outputStream = context.visitClass(objectDef.getName(), originatingElements.getOriginatingElements())) {
+            outputStream.write(ByteCodeWriterUtils.writeByteCode(objectDef, context));
         }
     }
 

@@ -40,9 +40,9 @@ import java.util.stream.Collectors;
 public class ScalaMethodElement extends AbstractScalaMemberElement implements MethodElement {
 
     protected final ScalaClassElement declaringType;
-    private final ClassElement owningType;
     protected final ScalaVisitorContext visitorContext;
     protected final ScalaMethodData methodData;
+    private final ClassElement owningType;
     @Nullable
     private final AnnotationMetadata presetAnnotationMetadata;
     @Nullable
@@ -212,7 +212,7 @@ public class ScalaMethodElement extends AbstractScalaMemberElement implements Me
 
     @Override
     public ClassElement getOwningType() {
-        return owningType;
+        return isDefault() ? declaringType : owningType;
     }
 
     @Override

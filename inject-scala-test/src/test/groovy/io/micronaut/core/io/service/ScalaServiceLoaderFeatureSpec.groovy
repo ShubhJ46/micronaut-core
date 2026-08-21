@@ -63,7 +63,7 @@ class CustomCondition extends Condition:
             }
 
             @Override
-            protected void addImageSingleton(ServiceScanner.StaticServiceDefinitions staticServiceDefinitions) {
+            protected void addImageSingleton(ServiceScanner.ExclusiveStaticServiceDefinitions staticServiceDefinitions) {
                 // no-op
             }
 
@@ -93,8 +93,8 @@ class CustomCondition extends Condition:
             }
 
             @Override
-            protected ServiceScanner.StaticServiceDefinitions buildStaticServiceDefinitions(Feature.BeforeAnalysisAccess access) {
-                return new ServiceScanner.StaticServiceDefinitions((BeanDefinitionReference.name): [definition.getClass().name] as Set)
+            protected ServiceScanner.ExclusiveStaticServiceDefinitions buildStaticServiceDefinitions(Feature.BeforeAnalysisAccess access) {
+                return new ServiceScanner.ExclusiveStaticServiceDefinitions((BeanDefinitionReference.name): [definition.getClass().name] as Set)
             }
         }
 

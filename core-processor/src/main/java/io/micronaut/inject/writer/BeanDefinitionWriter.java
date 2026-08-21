@@ -252,21 +252,31 @@ public final class BeanDefinitionWriter implements BeanElement, Toggleable, Elem
 
     private static final Method GET_BEAN_REGISTRATIONS_FOR_CONSTRUCTOR_ARGUMENT = getBeanLookupMethod("getBeanRegistrationsForConstructorArgument", true);
 
+    private static final Method GET_SCALA_BEAN_REGISTRATIONS_FOR_CONSTRUCTOR_ARGUMENT = getBeanLookupMethod("getScalaBeanRegistrationsForConstructorArgument", true);
+
     private static final Method GET_BEAN_REGISTRATION_FOR_CONSTRUCTOR_ARGUMENT = getBeanLookupMethod("getBeanRegistrationForConstructorArgument", true);
 
     private static final Method GET_BEANS_OF_TYPE_FOR_CONSTRUCTOR_ARGUMENT = getBeanLookupMethod("getBeansOfTypeForConstructorArgument", true);
+
+    private static final Method GET_SCALA_BEANS_OF_TYPE_FOR_CONSTRUCTOR_ARGUMENT = getBeanLookupMethod("getScalaBeansOfTypeForConstructorArgument", true);
 
     private static final Method GET_STREAM_OF_TYPE_FOR_CONSTRUCTOR_ARGUMENT = getBeanLookupMethod("getStreamOfTypeForConstructorArgument", true);
 
     private static final Method GET_MAP_OF_TYPE_FOR_CONSTRUCTOR_ARGUMENT = getBeanLookupMethod("getMapOfTypeForConstructorArgument", true);
 
+    private static final Method GET_SCALA_MAP_OF_TYPE_FOR_CONSTRUCTOR_ARGUMENT = getBeanLookupMethod("getScalaMapOfTypeForConstructorArgument", true);
+
     private static final Method FIND_BEAN_FOR_CONSTRUCTOR_ARGUMENT = getBeanLookupMethod("findBeanForConstructorArgument", true);
+
+    private static final Method FIND_SCALA_BEAN_FOR_CONSTRUCTOR_ARGUMENT = getBeanLookupMethod("findScalaBeanForConstructorArgument", true);
 
     private static final Method GET_BEAN_FOR_FIELD = getBeanLookupMethod("getBeanForField", false);
 
     private static final Method GET_BEAN_FOR_ANNOTATION = getBeanLookupMethod("getBeanForAnnotation", false);
 
     private static final Method GET_BEAN_REGISTRATIONS_FOR_FIELD = getBeanLookupMethod("getBeanRegistrationsForField", true);
+
+    private static final Method GET_SCALA_BEAN_REGISTRATIONS_FOR_FIELD = getBeanLookupMethod("getScalaBeanRegistrationsForField", true);
 
     private static final Method GET_BEAN_REGISTRATION_FOR_FIELD = getBeanLookupMethod("getBeanRegistrationForField", true);
 
@@ -288,15 +298,23 @@ public final class BeanDefinitionWriter implements BeanElement, Toggleable, Elem
 
     private static final Method GET_BEAN_REGISTRATIONS_FOR_METHOD_ARGUMENT = getBeanLookupMethodForArgument("getBeanRegistrationsForMethodArgument", true);
 
+    private static final Method GET_SCALA_BEAN_REGISTRATIONS_FOR_METHOD_ARGUMENT = getBeanLookupMethodForArgument("getScalaBeanRegistrationsForMethodArgument", true);
+
     private static final Method GET_BEAN_REGISTRATION_FOR_METHOD_ARGUMENT = getBeanLookupMethodForArgument("getBeanRegistrationForMethodArgument", true);
 
     private static final Method GET_BEANS_OF_TYPE_FOR_METHOD_ARGUMENT = getBeanLookupMethodForArgument("getBeansOfTypeForMethodArgument", true);
+
+    private static final Method GET_SCALA_BEANS_OF_TYPE_FOR_METHOD_ARGUMENT = getBeanLookupMethodForArgument("getScalaBeansOfTypeForMethodArgument", true);
 
     private static final Method GET_STREAM_OF_TYPE_FOR_METHOD_ARGUMENT = getBeanLookupMethodForArgument("getStreamOfTypeForMethodArgument", true);
 
     private static final Method GET_MAP_OF_TYPE_FOR_METHOD_ARGUMENT = getBeanLookupMethodForArgument("getMapOfTypeForMethodArgument", true);
 
+    private static final Method GET_SCALA_MAP_OF_TYPE_FOR_METHOD_ARGUMENT = getBeanLookupMethodForArgument("getScalaMapOfTypeForMethodArgument", true);
+
     private static final Method FIND_BEAN_FOR_METHOD_ARGUMENT = getBeanLookupMethodForArgument("findBeanForMethodArgument", true);
+
+    private static final Method FIND_SCALA_BEAN_FOR_METHOD_ARGUMENT = getBeanLookupMethodForArgument("findScalaBeanForMethodArgument", true);
 
     private static final Method CHECK_INJECTED_BEAN_PROPERTY_VALUE = ReflectionUtils.getRequiredInternalMethod(
         AbstractInitializableBeanDefinition.class,
@@ -2807,7 +2825,7 @@ public final class BeanDefinitionWriter implements BeanElement, Toggleable, Elem
                     resolveFieldValue(injectMethodSignature, fieldElement, GET_BEAN_REGISTRATION_FOR_FIELD, isArray, true, fieldIndex);
 
                 case BeanRegistrationsInjectionPoint<ClassElement> ignore ->
-                    resolveFieldValue(injectMethodSignature, fieldElement, GET_BEAN_REGISTRATIONS_FOR_FIELD, isArray, true, fieldIndex);
+                    resolveFieldValue(injectMethodSignature, fieldElement, GET_SCALA_BEAN_REGISTRATIONS_FOR_FIELD, isArray, true, fieldIndex);
 
                 case BeansInjectionPoint<ClassElement> ignore ->
                     resolveFieldValue(injectMethodSignature, fieldElement, GET_BEANS_OF_TYPE_FOR_FIELD, isArray, true, fieldIndex);
@@ -3766,13 +3784,13 @@ public final class BeanDefinitionWriter implements BeanElement, Toggleable, Elem
             case BeanRegistrationInjectionPoint<ClassElement> v ->
                 injectConstructorParameter(GET_BEAN_REGISTRATION_FOR_CONSTRUCTOR_ARGUMENT, true, v.type(), aThis, methodParameters, index, constructorMethodVarSupplier, v.annotationMetadata());
             case BeanRegistrationsInjectionPoint<ClassElement> v ->
-                injectConstructorParameter(GET_BEAN_REGISTRATIONS_FOR_CONSTRUCTOR_ARGUMENT, true, v.type(), aThis, methodParameters, index, constructorMethodVarSupplier, v.annotationMetadata());
+                injectConstructorParameter(GET_SCALA_BEAN_REGISTRATIONS_FOR_CONSTRUCTOR_ARGUMENT, true, v.type(), aThis, methodParameters, index, constructorMethodVarSupplier, v.annotationMetadata());
             case BeansInjectionPoint<ClassElement> v ->
-                injectConstructorParameter(GET_BEANS_OF_TYPE_FOR_CONSTRUCTOR_ARGUMENT, true, v.type(), aThis, methodParameters, index, constructorMethodVarSupplier, v.annotationMetadata());
+                injectConstructorParameter(isScalaType(v.type()) ? GET_SCALA_BEANS_OF_TYPE_FOR_CONSTRUCTOR_ARGUMENT : GET_BEANS_OF_TYPE_FOR_CONSTRUCTOR_ARGUMENT, true, v.type(), aThis, methodParameters, index, constructorMethodVarSupplier, v.annotationMetadata());
             case MapOfBeansInjectionPoint<ClassElement> v ->
-                injectConstructorParameter(GET_MAP_OF_TYPE_FOR_CONSTRUCTOR_ARGUMENT, true, v.type(), aThis, methodParameters, index, constructorMethodVarSupplier, v.annotationMetadata());
+                injectConstructorParameter(isScalaType(v.type()) ? GET_SCALA_MAP_OF_TYPE_FOR_CONSTRUCTOR_ARGUMENT : GET_MAP_OF_TYPE_FOR_CONSTRUCTOR_ARGUMENT, true, v.type(), aThis, methodParameters, index, constructorMethodVarSupplier, v.annotationMetadata());
             case OptionalBeanInjectionPoint<ClassElement> v ->
-                injectConstructorParameter(FIND_BEAN_FOR_CONSTRUCTOR_ARGUMENT, true, v.type(), aThis, methodParameters, index, constructorMethodVarSupplier, v.annotationMetadata());
+                injectConstructorParameter(isScalaType(v.type()) ? FIND_SCALA_BEAN_FOR_CONSTRUCTOR_ARGUMENT : FIND_BEAN_FOR_CONSTRUCTOR_ARGUMENT, true, v.type(), aThis, methodParameters, index, constructorMethodVarSupplier, v.annotationMetadata());
             case StreamOfBeansInjectionPoint<ClassElement> v ->
                 injectConstructorParameter(GET_STREAM_OF_TYPE_FOR_CONSTRUCTOR_ARGUMENT, true, v.type(), aThis, methodParameters, index, constructorMethodVarSupplier, v.annotationMetadata());
             case ParameterInjectionPoint<ClassElement> v -> {
@@ -3793,6 +3811,10 @@ public final class BeanDefinitionWriter implements BeanElement, Toggleable, Elem
                 yield getInvokeGetPropertyPlaceholderValueForConstructor(aThis, methodParameters, index, v.type(), v.value());
             }
         };
+    }
+
+    private static boolean isScalaType(ClassElement type) {
+        return type.getName().startsWith("scala.");
     }
 
     private ExpressionDef injectMethodParameterExpression(VariableDef.This aThis,
@@ -3816,13 +3838,13 @@ public final class BeanDefinitionWriter implements BeanElement, Toggleable, Elem
             case BeanRegistrationInjectionPoint<ClassElement> v ->
                 injectMethodParameter(GET_BEAN_REGISTRATION_FOR_METHOD_ARGUMENT, true, v.type(), aThis, methodParameters, methodIndex, parameterIndex, v.annotationMetadata());
             case BeanRegistrationsInjectionPoint<ClassElement> v ->
-                injectMethodParameter(GET_BEAN_REGISTRATIONS_FOR_METHOD_ARGUMENT, true, v.type(), aThis, methodParameters, methodIndex, parameterIndex, v.annotationMetadata());
+                injectMethodParameter(GET_SCALA_BEAN_REGISTRATIONS_FOR_METHOD_ARGUMENT, true, v.type(), aThis, methodParameters, methodIndex, parameterIndex, v.annotationMetadata());
             case BeansInjectionPoint<ClassElement> v ->
-                injectMethodParameter(GET_BEANS_OF_TYPE_FOR_METHOD_ARGUMENT, true, v.type(), aThis, methodParameters, methodIndex, parameterIndex, v.annotationMetadata());
+                injectMethodParameter(isScalaType(v.type()) ? GET_SCALA_BEANS_OF_TYPE_FOR_METHOD_ARGUMENT : GET_BEANS_OF_TYPE_FOR_METHOD_ARGUMENT, true, v.type(), aThis, methodParameters, methodIndex, parameterIndex, v.annotationMetadata());
             case MapOfBeansInjectionPoint<ClassElement> v ->
-                injectMethodParameter(GET_MAP_OF_TYPE_FOR_METHOD_ARGUMENT, true, v.type(), aThis, methodParameters, methodIndex, parameterIndex, v.annotationMetadata());
+                injectMethodParameter(isScalaType(v.type()) ? GET_SCALA_MAP_OF_TYPE_FOR_METHOD_ARGUMENT : GET_MAP_OF_TYPE_FOR_METHOD_ARGUMENT, true, v.type(), aThis, methodParameters, methodIndex, parameterIndex, v.annotationMetadata());
             case OptionalBeanInjectionPoint<ClassElement> v ->
-                injectMethodParameter(FIND_BEAN_FOR_METHOD_ARGUMENT, true, v.type(), aThis, methodParameters, methodIndex, parameterIndex, v.annotationMetadata());
+                injectMethodParameter(isScalaType(v.type()) ? FIND_SCALA_BEAN_FOR_METHOD_ARGUMENT : FIND_BEAN_FOR_METHOD_ARGUMENT, true, v.type(), aThis, methodParameters, methodIndex, parameterIndex, v.annotationMetadata());
             case StreamOfBeansInjectionPoint<ClassElement> v ->
                 injectMethodParameter(GET_STREAM_OF_TYPE_FOR_METHOD_ARGUMENT, true, v.type(), aThis, methodParameters, methodIndex, parameterIndex, v.annotationMetadata());
             case ParameterInjectionPoint<ClassElement> ignore ->
@@ -4221,7 +4243,7 @@ public final class BeanDefinitionWriter implements BeanElement, Toggleable, Elem
     }
 
     private boolean isContainerType() {
-        return beanTypeElement.isArray() || DefaultArgument.CONTAINER_TYPES.stream().anyMatch(c -> c.equals(beanFullClassName));
+        return beanTypeElement.isContainerType();
     }
 
     private static boolean isConfigurationProperties(AnnotationMetadata annotationMetadata) {

@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/**
+ * Test annotations for Scala processing.
+ */
 @NullMarked
 package io.micronaut.scala.processing.test.annotation;
 

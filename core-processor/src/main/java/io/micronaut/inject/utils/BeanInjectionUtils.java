@@ -248,7 +248,7 @@ public class BeanInjectionUtils {
                 }
             }
             isArray = genericType.isArray();
-            if (genericType.isAssignable(Collection.class) || isArray) {
+            if (genericType.isAssignable(Collection.class) || isScalaCollection(genericType) || isArray) {
                 ClassElement typeArgument = genericType.isArray() ? genericType.fromArray() : genericType.getFirstTypeArgument().orElse(null);
                 if (typeArgument != null && !typeArgument.isPrimitive()) {
                     if (typeArgument.isAssignable(BeanRegistration.class)) {
@@ -259,16 +259,18 @@ public class BeanInjectionUtils {
                 } else {
                     return new BeanInjectionPoint<>(genericType, annotationMetadata);
                 }
-            } else if (isInjectableMap(genericType)) {
-                Map<String, ClassElement> mapArguments = genericType.getTypeArguments(Map.class);
+            } else if (isInjectableMap(genericType) || isInjectableScalaMap(genericType)) {
+                Map<String, ClassElement> mapArguments = genericType.getTypeArguments();
                 ClassElement objectType = objectType(visitorContext);
-                ClassElement injectBeanType = mapArguments.getOrDefault("V", objectType);
+                ClassElement injectBeanType = isInjectableScalaMap(genericType)
+                    ? mapArguments.values().stream().skip(1).findFirst().orElse(objectType)
+                    : mapArguments.getOrDefault("V", objectType);
                 return new MapOfBeansInjectionPoint<>(genericType, annotationMetadata, injectBeanType);
             } else if (genericType.isAssignable(Stream.class)) {
                 ClassElement objectType = objectType(visitorContext);
                 ClassElement injectBeanType = genericType.getFirstTypeArgument().orElse(objectType);
                 return new StreamOfBeansInjectionPoint<>(genericType, annotationMetadata, injectBeanType);
-            } else if (genericType.isAssignable(Optional.class)) {
+            } else if (genericType.isAssignable(Optional.class) || isScalaOptional(genericType)) {
                 ClassElement objectType = objectType(visitorContext);
                 ClassElement injectBeanType = genericType.getFirstTypeArgument().orElse(objectType);
                 return new OptionalBeanInjectionPoint<>(genericType, annotationMetadata, injectBeanType);
@@ -356,5 +358,23 @@ public class BeanInjectionUtils {
             }
         }
         return false;
+    }
+
+    private static boolean isScalaCollection(ClassElement genericType) {
+        return genericType.getName().startsWith("scala.collection.")
+            && !genericType.getName().contains(".Map");
+    }
+
+    private static boolean isInjectableScalaMap(ClassElement genericType) {
+        if (!genericType.getName().startsWith("scala.collection.") || !genericType.getName().contains(".Map")) {
+            return false;
+        }
+        Map<String, ClassElement> typeArgs = genericType.getTypeArguments();
+        ClassElement keyType = typeArgs.get("K");
+        return keyType != null && keyType.isAssignable(CharSequence.class);
+    }
+
+    private static boolean isScalaOptional(ClassElement genericType) {
+        return genericType.getName().equals("scala.Option");
     }
 }

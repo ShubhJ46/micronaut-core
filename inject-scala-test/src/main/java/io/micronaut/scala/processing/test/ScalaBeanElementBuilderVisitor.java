@@ -19,7 +19,6 @@ import io.micronaut.context.annotation.Primary;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.ElementQuery;
-import io.micronaut.inject.ast.FieldElement;
 import io.micronaut.inject.ast.MethodElement;
 import io.micronaut.inject.ast.beans.BeanElementBuilder;
 import io.micronaut.inject.visitor.TypeElementVisitor;
@@ -158,6 +157,7 @@ public final class ScalaBeanElementBuilderVisitor implements TypeElementVisitor<
         /**
          * Field-produced bean.
          */
+        @SuppressWarnings("VisibilityModifier")
         public final BeanB beanB = new BeanB("field");
 
         /**

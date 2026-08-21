@@ -32,12 +32,19 @@ import java.util.List;
  */
 public final class ScalaTypeElementQueryVisitor implements TypeElementVisitor<Object, Object> {
 
+    @SuppressWarnings("VisibilityModifier")
     public static boolean enabled;
+    @SuppressWarnings({"VisibilityModifier", "ConstantName"})
     public static final List<ClassElement> visitedClasses = new ArrayList<>();
+    @SuppressWarnings({"VisibilityModifier", "ConstantName"})
     public static final List<ConstructorElement> visitedConstructors = new ArrayList<>();
+    @SuppressWarnings({"VisibilityModifier", "ConstantName"})
     public static final List<FieldElement> visitedFields = new ArrayList<>();
+    @SuppressWarnings({"VisibilityModifier", "ConstantName"})
     public static final List<EnumConstantElement> visitedEnumConstants = new ArrayList<>();
+    @SuppressWarnings({"VisibilityModifier", "ConstantName"})
     public static final List<MethodElement> visitedMethods = new ArrayList<>();
+    @SuppressWarnings("VisibilityModifier")
     public static TypeElementQuery query = TypeElementQuery.DEFAULT;
 
     /**

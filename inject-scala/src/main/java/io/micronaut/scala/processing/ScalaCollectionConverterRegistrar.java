@@ -58,6 +58,7 @@ public final class ScalaCollectionConverterRegistrar implements TypeConverterReg
         conversionService.addConverter(Map.class, scala.collection.Map.class, ScalaCollectionConverterRegistrar::toScalaMap);
         conversionService.addConverter(Map.class, scala.collection.mutable.Map.class, ScalaCollectionConverterRegistrar::toMutableMap);
         conversionService.addConverter(Map.class, scala.collection.immutable.Map.class, ScalaCollectionConverterRegistrar::toImmutableMap);
+        conversionService.addConverter(Optional.class, scala.Option.class, ScalaCollectionConverterRegistrar::toScalaOption);
     }
 
     private static Optional<scala.collection.Iterable> toScalaIterable(Collection<?> collection,
@@ -173,6 +174,12 @@ public final class ScalaCollectionConverterRegistrar implements TypeConverterReg
                                                                            Class<scala.collection.immutable.Map> targetType,
                                                                            ConversionContext context) {
         return Optional.of(scala.collection.immutable.Map.from(CollectionConverters.asScala(map)));
+    }
+
+    private static Optional<scala.Option> toScalaOption(Optional<?> optional,
+                                                        Class<scala.Option> targetType,
+                                                        ConversionContext context) {
+        return Optional.of(scala.Option.apply(optional.orElse(null)));
     }
 
     private static IterableOnce<?> toScalaIterableOnce(Collection<?> collection) {

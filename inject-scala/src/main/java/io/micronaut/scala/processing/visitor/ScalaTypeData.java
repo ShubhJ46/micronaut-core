@@ -41,6 +41,7 @@ import java.util.Map;
  * @param upperBounds The wildcard upper bounds
  * @param lowerBounds The wildcard lower bounds
  */
+@SuppressWarnings("ParameterNumber")
 public record ScalaTypeData(
     String name,
     boolean primitive,

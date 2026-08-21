@@ -64,6 +64,7 @@ public final class ScalaPropertyElement extends AbstractScalaMemberElement imple
         this(declaringType, propertyData, visitorContext, null);
     }
 
+    @SuppressWarnings("checkstyle:ParameterNumber")
     private ScalaPropertyElement(
         ScalaClassElement declaringType,
         ScalaPropertyData propertyData,
