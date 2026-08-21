@@ -68,6 +68,9 @@ final class MicronautScalaCompilerPlugin extends StandardPlugin:
   override val optionsHelp: Option[String] = None
 
   override def initialize(options: List[String])(using Context): List[PluginPhase] =
+    // The adapter is loaded in an isolated class loader so it can use Micronaut's
+    // annotation-processing APIs without leaking compiler-plugin implementation
+    // classes into the compiler's parent class loader.
     val delegate = MicronautScalaCompilerPlugin.delegate(getClass)
     val initializeMethod = delegate.getClass.getMethod("initialize", classOf[List[?]], classOf[Context])
     initializeMethod.invoke(delegate, options, summon[Context]).asInstanceOf[List[PluginPhase]]
@@ -1350,33 +1353,23 @@ private object ScalaModelExtractor:
         None
 
   private def annotationValue(tree: tpd.Tree)(using Context, AnnotationDefaults): Object | Null =
-    arrayLiteralValues(tree) match
-      case Some(values) =>
-        values
-      case None =>
-        classLiteralValue(tree) match
-          case Some(value) =>
-            value
-          case None =>
-            nestedAnnotationValue(tree) match
-              case Some(value) =>
-                value
-              case None =>
-                typedConstantValue(tree) match
-                  case Some(value) =>
-                    value
-                  case None =>
-                    tree match
-                      case literal: tpd.Literal =>
-                        annotationConstantValue(literal.const.value).orNull
-                      case select: tpd.Select if isEnumConstant(select.symbol) =>
-                        select.name.toString
-                      case ident: tpd.Ident if ident.name.toString == "_" =>
-                        null
-                      case ident: tpd.Ident if isEnumConstant(ident.symbol) =>
-                        ident.name.toString
-                      case _ =>
-                        renderedClassLiteralValue(tree.show).map(name => classValueData(name)).getOrElse(tree.show)
+    arrayLiteralValues(tree)
+      .orElse(classLiteralValue(tree))
+      .orElse(nestedAnnotationValue(tree))
+      .orElse(typedConstantValue(tree))
+      .getOrElse {
+        tree match
+          case literal: tpd.Literal =>
+            annotationConstantValue(literal.const.value).orNull
+          case select: tpd.Select if isEnumConstant(select.symbol) =>
+            select.name.toString
+          case ident: tpd.Ident if ident.name.toString == "_" =>
+            null
+          case ident: tpd.Ident if isEnumConstant(ident.symbol) =>
+            ident.name.toString
+          case _ =>
+            renderedClassLiteralValue(tree.show).map(name => classValueData(name)).getOrElse(tree.show)
+      }
 
   private def typedConstantValue(tree: tpd.Tree)(using Context, AnnotationDefaults): Option[Object] =
     def symbolConstantValue(symbol: Symbol): Option[Object] =
@@ -1641,9 +1634,7 @@ private object ScalaModelExtractor:
   private def skipMethod(symbol: Symbol)(using Context): Boolean =
     symbol == Symbols.NoSymbol ||
       symbol.denot.isConstructor ||
-      hasFlag(symbol, Flags.Synthetic) ||
-      hasFlag(symbol, Flags.Artifact) ||
-      hasFlag(symbol, Flags.Accessor)
+      hasFlag(symbol, Flags.Synthetic | Flags.Artifact | Flags.Accessor)
 
   private def skipAccessorCandidate(symbol: Symbol)(using Context): Boolean =
     symbol == Symbols.NoSymbol ||
